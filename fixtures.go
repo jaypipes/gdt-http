@@ -2,7 +2,7 @@
 //
 // See the COPYING file in the root project directory for full text.
 
-package http
+package gdthttp
 
 import (
 	nethttp "net/http"
