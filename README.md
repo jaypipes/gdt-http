@@ -1,4 +1,4 @@
-# `gdt-http` - The Go Declarative Testing framework - HTTP API testing library ![go test workflow](https://github.com/jaypipes/gdt-http/actions/workflows/gate-tests.yml/badge.svg)
+# Go Declarative Testing - HTTP ![go test workflow](https://github.com/jaypipes/gdt-http/actions/workflows/gate-tests.yml/badge.svg)
 
 [`gdt`][gdt] is a testing library that allows test authors to cleanly describe tests
 in a YAML file. `gdt` reads YAML files that describe a test's assertions and
@@ -7,10 +7,10 @@ then builds a set of Go structures that the standard Go
 
 [gdt]: https://github.com/jaypipes/gdt
 
-`gdt-http` is a companion Go library for `gdt` that allows test authors to
-cleanly describe functional tests of HTTP APIs using a simple, clear YAML
-format. `gdt-http` parses YAML files that describe HTTP requests and assertions
-about what the HTTP response should contain.
+This `gdt-http` repository is a companion Go library for `gdt` that allows test
+authors to cleanly describe functional tests of HTTP APIs using a simple, clear
+YAML format. `gdt-http` parses YAML files that describe HTTP requests and
+assertions about what the HTTP response should contain.
 
 ## Installation
 
