@@ -1,0 +1,9 @@
+name: missing-schema
+description: a scenario referencing a JSONSchema file that does not exist
+tests:
+ - name: list all books
+   GET: /books
+   response:
+     status: 200
+     json:
+       schema: schemas/doesnotexist.json

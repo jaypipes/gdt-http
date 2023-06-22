@@ -2,67 +2,101 @@
 //
 // See the COPYING file in the root project directory for full text.
 
-package gdthttp
+package http
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 
-	"github.com/ghodss/yaml"
-
-	"github.com/jaypipes/gdt"
+	"github.com/jaypipes/gdt-core/errors"
+	"github.com/jaypipes/gdt-core/spec"
+	"github.com/samber/lo"
+	"gopkg.in/yaml.v3"
 )
 
-const (
-	msgUnsupportedJSONSchemaReference = "unsupported JSONSchema reference URL: %s"
-	msgJSONSchemaFileNotFound         = "unable to find JSONSchema file: %s"
-)
-
-func init() {
-	gdt.TestTypeParsers.Register(&parser{}, "http", "")
-}
-
-func errUnsupportedJSONSchemaReference(url string) error {
-	return fmt.Errorf(msgUnsupportedJSONSchemaReference, url)
-}
-
-func errJSONSchemaFileNotFound(path string) error {
-	return fmt.Errorf(msgJSONSchemaFileNotFound, path)
-}
-
-type parser struct{}
-
-// Parse accepts an Appendable and a string of YAML contents from a gdt test
-// file. It then parses the HTTP test case file and adds the HTTP-specific
-// tests to the supplied Appendable
-func (p *parser) Parse(a gdt.Appendable, contents []byte) error {
-	var err error
-	tc := TestCase{}
-	if err = yaml.Unmarshal(contents, &tc); err != nil {
+func (s *Spec) UnmarshalYAML(node *yaml.Node) error {
+	if node.Kind != yaml.MappingNode {
+		return errors.ExpectedMapAt(node)
+	}
+	// maps/structs are stored in a top-level Node.Content field which is a
+	// concatenated slice of Node pointers in pairs of key/values.
+	for i := 0; i < len(node.Content); i += 2 {
+		keyNode := node.Content[i]
+		if keyNode.Kind != yaml.ScalarNode {
+			return errors.ExpectedScalarAt(keyNode)
+		}
+		key := keyNode.Value
+		valNode := node.Content[i+1]
+		switch key {
+		case "url":
+			if valNode.Kind != yaml.ScalarNode {
+				return errors.ExpectedScalarAt(valNode)
+			}
+			s.URL = strings.TrimSpace(valNode.Value)
+		case "method":
+			if valNode.Kind != yaml.ScalarNode {
+				return errors.ExpectedScalarAt(valNode)
+			}
+			s.Method = strings.TrimSpace(valNode.Value)
+		case "GET":
+			if valNode.Kind != yaml.ScalarNode {
+				return errors.ExpectedScalarAt(valNode)
+			}
+			s.GET = strings.TrimSpace(valNode.Value)
+		case "POST":
+			if valNode.Kind != yaml.ScalarNode {
+				return errors.ExpectedScalarAt(valNode)
+			}
+			s.POST = strings.TrimSpace(valNode.Value)
+		case "PUT":
+			if valNode.Kind != yaml.ScalarNode {
+				return errors.ExpectedScalarAt(valNode)
+			}
+			s.PUT = strings.TrimSpace(valNode.Value)
+		case "DELETE":
+			if valNode.Kind != yaml.ScalarNode {
+				return errors.ExpectedScalarAt(valNode)
+			}
+			s.DELETE = strings.TrimSpace(valNode.Value)
+		case "PATCH":
+			if valNode.Kind != yaml.ScalarNode {
+				return errors.ExpectedScalarAt(valNode)
+			}
+			s.PATCH = strings.TrimSpace(valNode.Value)
+		case "data":
+			var data interface{}
+			if err := valNode.Decode(&data); err != nil {
+				return err
+			}
+			s.Data = data
+		case "response":
+			if valNode.Kind != yaml.MappingNode {
+				return errors.ExpectedMapAt(valNode)
+			}
+			var ra *ResponseAssertions
+			if err := valNode.Decode(&ra); err != nil {
+				return err
+			}
+			s.Response = ra
+		default:
+			if lo.Contains(spec.BaseFields, key) {
+				continue
+			}
+			return errors.UnknownFieldAt(key, keyNode)
+		}
+	}
+	if err := validateResponseAssertions(s.Response); err != nil {
 		return err
 	}
-	for _, s := range tc.Specs {
-		if err = validateResponseAssertion(s.Response); err != nil {
-			return err
-		}
-		if err = validateMethodAndURL(s); err != nil {
-			return err
-		}
-		// If the user did not specify a name for the test spec, just default
-		// it to the method and URL
-		if s.Name == "" {
-			s.Name = s.Method + ":" + s.URL
-		}
-		s.defaults = tc.Defaults
+	if err := validateMethodAndURL(s); err != nil {
+		return err
 	}
-	a.Append(&tc)
 	return nil
 }
 
-func validateMethodAndURL(s *TestSpec) error {
+func validateMethodAndURL(s *Spec) error {
 	if s.URL == "" {
 		if s.GET != "" {
 			s.Method = "GET"
@@ -94,7 +128,7 @@ func validateMethodAndURL(s *TestSpec) error {
 	return nil
 }
 
-func validateResponseAssertion(resp *ResponseAssertion) error {
+func validateResponseAssertions(resp *ResponseAssertions) error {
 	if resp == nil {
 		return nil
 	}
@@ -108,7 +142,7 @@ func validateResponseAssertion(resp *ResponseAssertion) error {
 	schemaURL := resp.JSON.Schema
 	if strings.HasPrefix(schemaURL, "http://") || strings.HasPrefix(schemaURL, "https://") {
 		// TODO(jaypipes): Support network lookups?
-		return errUnsupportedJSONSchemaReference(schemaURL)
+		return UnsupportedJSONSchemaReference(schemaURL)
 	}
 	// Convert relative filepaths to absolute filepaths rooted in the context's
 	// testdir after stripping any "file://" scheme prefix
@@ -117,7 +151,7 @@ func validateResponseAssertion(resp *ResponseAssertion) error {
 
 	f, err := os.Open(schemaURL)
 	if err != nil {
-		return errJSONSchemaFileNotFound(schemaURL)
+		return JSONSchemaFileNotFound(schemaURL)
 	}
 	defer f.Close()
 	if runtime.GOOS == "windows" {

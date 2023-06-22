@@ -2,7 +2,7 @@
 //
 // See the COPYING file in the root project directory for full text.
 
-package gdthttp
+package http
 
 import (
 	"bytes"
@@ -16,48 +16,42 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jaypipes/gdt"
+	gdtcontext "github.com/jaypipes/gdt-core/context"
+	"github.com/jaypipes/gdt-core/result"
 	"github.com/stretchr/testify/require"
 )
 
-// TestSpec describes a a test of a single HTTP request and response
-type TestSpec struct {
-	defaults *TestCaseDefaults
-	// Name for the individual HTTP call test
-	Name string `json:"name,omitempty"`
-	// Description of the test
-	Description string `json:"description,omitempty"`
-	// URL being called by HTTP client
-	URL string `json:"url,omitempty"`
-	// HTTP Method specified by HTTP client
-	Method string `json:"method,omitempty"`
-	// Shortcut for URL and Method of "GET"
-	GET string `json:"GET,omitempty"`
-	// Shortcut for URL and Method of "POST"
-	POST string `json:"POST,omitempty"`
-	// Shortcut for URL and Method of "PUT"
-	PUT string `json:"PUT,omitempty"`
-	// Shortcut for URL and Method of "PATCH"
-	PATCH string `json:"PATCH,omitempty"`
-	// Shortcut for URL and Method of "DELETE"
-	DELETE string `json:"DELETE,omitempty"`
-	// JSON payload to send along in request
-	Data interface{} `json:"data,omitempty"`
-	// Specification for expected response
-	Response *ResponseAssertion `json:"response,omitempty"`
+// RunData is data stored in the context about the run. It is fetched from the
+// gdtcontext.PriorRun() function and evaluated for things like the special
+// `$LOCATION` URL value.
+type RunData struct {
+	Response *nethttp.Response
+}
+
+// priorRunData returns any prior run cached data in the context.
+func priorRunData(ctx context.Context) *RunData {
+	prData := gdtcontext.PriorRun(ctx)
+	httpData, ok := prData[pluginName]
+	if !ok {
+		return nil
+	}
+	if data, ok := httpData.(*RunData); ok {
+		return data
+	}
+	return nil
 }
 
 // getURL returns the URL to use for the test's HTTP request. The test's url
 // field is first queried to see if it is the special $LOCATION string. If it
 // is, then we return the previous HTTP response's Location header. Otherwise,
 // we construct the URL from the httpFile's base URL and the test's url field.
-func (s *TestSpec) getURL(ctx context.Context) (string, error) {
+func (s *Spec) getURL(ctx context.Context) (string, error) {
 	if strings.ToUpper(s.URL) == "$LOCATION" {
-		pr := getPreviousResponse(ctx)
-		if pr == nil {
+		pr := priorRunData(ctx)
+		if pr == nil || pr.Response == nil {
 			panic("test unit referenced $LOCATION before executing an HTTP request")
 		}
-		url, err := pr.Location()
+		url, err := pr.Response.Location()
 		if err != nil {
 			return "", ErrExpectedLocationHeader
 		}
@@ -72,11 +66,10 @@ func (s *TestSpec) getURL(ctx context.Context) (string, error) {
 // expressions. If we find any, we query the fixture registry to see if any
 // fixtures have a value that matches the JSONPath expression. See
 // gdt.fixtures:jsonFixture for more information on how this works
-func (s *TestSpec) processRequestData(ctx context.Context) {
+func (s *Spec) processRequestData(ctx context.Context) {
 	if s.Data == nil {
 		return
 	}
-	gdt.V3("http.file.TestSpec:processRequestData", "ht.data: %+v\n", s.Data)
 	// Get a pointer to the unmarshaled interface{} so we can mutate the
 	// contents pointed to
 	p := reflect.ValueOf(&s.Data)
@@ -102,10 +95,11 @@ func (s *TestSpec) processRequestData(ctx context.Context) {
 // client returns the HTTP client to use when executing HTTP requests. If any
 // fixture provides a state with key "http.client", the fixture is asked for
 // the HTTP client. Otherwise, we use the net/http.DefaultClient
-func (s *TestSpec) client(ctx context.Context) *nethttp.Client {
+func (s *Spec) client(ctx context.Context) *nethttp.Client {
 	// query the fixture registry to determine if any of them contain an
 	// http.client state attribute.
-	for _, f := range gdt.GetFixturesFromContext(ctx).List() {
+	fixtures := gdtcontext.Fixtures(ctx)
+	for _, f := range fixtures {
 		if f.HasState(StateKeyClient) {
 			c, ok := f.State(StateKeyClient).(*nethttp.Client)
 			if !ok {
@@ -120,7 +114,7 @@ func (s *TestSpec) client(ctx context.Context) *nethttp.Client {
 // processRequestDataMap processes a map pointed to by v, transforming any
 // string keys or values of the map into the results of calling the fixture
 // set's State() method.
-func (s *TestSpec) preprocessMap(
+func (s *Spec) preprocessMap(
 	ctx context.Context,
 	m reflect.Value,
 	kt reflect.Type,
@@ -130,7 +124,8 @@ func (s *TestSpec) preprocessMap(
 	for it.Next() {
 		if kt.Kind() == reflect.String {
 			keyStr := it.Key().String()
-			for _, f := range gdt.GetFixturesFromContext(ctx).List() {
+			fixtures := gdtcontext.Fixtures(ctx)
+			for _, f := range fixtures {
 				if !f.HasState(keyStr) {
 					continue
 				}
@@ -148,7 +143,7 @@ func (s *TestSpec) preprocessMap(
 	return nil
 }
 
-func (s *TestSpec) preprocessMapValue(
+func (s *Spec) preprocessMapValue(
 	ctx context.Context,
 	m reflect.Value,
 	k reflect.Value,
@@ -171,7 +166,8 @@ func (s *TestSpec) preprocessMapValue(
 		return s.preprocessMap(ctx, v, vt.Key(), vt.Elem())
 	case reflect.String:
 		valStr := v.String()
-		for _, f := range gdt.GetFixturesFromContext(ctx).List() {
+		fixtures := gdtcontext.Fixtures(ctx)
+		for _, f := range fixtures {
 			if !f.HasState(valStr) {
 				continue
 			}
@@ -186,7 +182,7 @@ func (s *TestSpec) preprocessMapValue(
 
 // Run executes the test described by the HTTP test. A new HTTP request and
 // response pair is created during this call.
-func (s *TestSpec) Run(ctx context.Context, t *testing.T) context.Context {
+func (s *Spec) Run(ctx context.Context, t *testing.T) error {
 	var body io.Reader
 	if s.Data != nil {
 		s.processRequestData(ctx)
@@ -194,15 +190,19 @@ func (s *TestSpec) Run(ctx context.Context, t *testing.T) context.Context {
 		require.Nil(t, err)
 		body = bytes.NewReader(jsonBody)
 	}
-	t.Run(s.Name, func(t *testing.T) {
+	runData := &RunData{}
+	var rerr error
+	t.Run(s.Title(), func(t *testing.T) {
 		url, err := s.getURL(ctx)
 		if err != nil {
-			panic(err)
+			rerr = err
+			return
 		}
 
 		req, err := nethttp.NewRequest(s.Method, url, body)
 		if err != nil {
-			panic(err)
+			rerr = err
+			return
 		}
 
 		// TODO(jaypipes): Allow customization of the HTTP client for proxying,
@@ -211,7 +211,8 @@ func (s *TestSpec) Run(ctx context.Context, t *testing.T) context.Context {
 
 		resp, err := c.Do(req)
 		if err != nil {
-			panic(err)
+			rerr = err
+			return
 		}
 
 		// Make sure we drain and close our response body...
@@ -247,7 +248,10 @@ func (s *TestSpec) Run(ctx context.Context, t *testing.T) context.Context {
 				}
 			}
 		}
-		ctx = storePreviousResponse(ctx, resp)
+		runData.Response = resp
 	})
-	return ctx
+	return result.New(
+		result.WithError(rerr),
+		result.WithData(pluginName, runData),
+	)
 }

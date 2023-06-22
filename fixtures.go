@@ -2,14 +2,14 @@
 //
 // See the COPYING file in the root project directory for full text.
 
-package gdthttp
+package http
 
 import (
 	nethttp "net/http"
 	"net/http/httptest"
 	"strings"
 
-	"github.com/jaypipes/gdt"
+	gdttypes "github.com/jaypipes/gdt-core/types"
 )
 
 const (
@@ -59,6 +59,6 @@ func (f *httpServerFixture) State(key string) interface{} {
 // http.Handler. The returned fixture exposes an "http.base_url" state key that
 // test cases of type "http" examine to determine the base URL the tests should
 // hit
-func NewServerFixture(h nethttp.Handler, useTLS bool) gdt.Fixture {
+func NewServerFixture(h nethttp.Handler, useTLS bool) gdttypes.Fixture {
 	return &httpServerFixture{handler: h, useTLS: useTLS}
 }

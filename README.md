@@ -232,7 +232,7 @@ We can register a `gdt.fixtures.JSONFixture` that contains the data in
 To reference any of the data in your `gdt.fixtures.JSONFixture` from your test unit, just make sure the fixture is listed in the test file's `requires` field:
 
 ```
-requires:
+require:
  - books_data
 ```
 
