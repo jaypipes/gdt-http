@@ -13,23 +13,23 @@ type Spec struct {
 	spec.Spec
 	defaults *Defaults
 	// URL being called by HTTP client
-	URL string `json:"url,omitempty"`
+	URL string `yaml:"url,omitempty"`
 	// HTTP Method specified by HTTP client
-	Method string `json:"method,omitempty"`
+	Method string `yaml:"method,omitempty"`
 	// Shortcut for URL and Method of "GET"
-	GET string `json:"GET,omitempty"`
+	GET string `yaml:"GET,omitempty"`
 	// Shortcut for URL and Method of "POST"
-	POST string `json:"POST,omitempty"`
+	POST string `yaml:"POST,omitempty"`
 	// Shortcut for URL and Method of "PUT"
-	PUT string `json:"PUT,omitempty"`
+	PUT string `yaml:"PUT,omitempty"`
 	// Shortcut for URL and Method of "PATCH"
-	PATCH string `json:"PATCH,omitempty"`
+	PATCH string `yaml:"PATCH,omitempty"`
 	// Shortcut for URL and Method of "DELETE"
-	DELETE string `json:"DELETE,omitempty"`
+	DELETE string `yaml:"DELETE,omitempty"`
 	// JSON payload to send along in request
-	Data interface{} `json:"data,omitempty"`
+	Data interface{} `yaml:"data,omitempty"`
 	// Specification for expected response
-	Response *ResponseAssertions `json:"response,omitempty"`
+	Response *ResponseAssertions `yaml:"response,omitempty"`
 }
 
 // Title returns a good name for the Spec
