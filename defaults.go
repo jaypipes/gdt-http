@@ -13,7 +13,12 @@ import (
 )
 
 type httpDefaults struct {
-	BaseURL string `json:"base_url,omitempty"`
+	// BaseURL is used as the base of the URLs called by the gdt-http plugin's
+	// Specs. If empty, fixtures are asked if they contain a "http.base_url"
+	// state key and if so, that is used as the URL base.
+	//
+	// See the `httpServerFixture` for an example of how this works.
+	BaseURL string `yaml:"base_url,omitempty"`
 }
 
 // Defaults is the known HTTP plugin defaults collection
