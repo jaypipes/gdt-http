@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/jaypipes/gdt-core/errors"
-	"github.com/jaypipes/gdt-core/spec"
+	gdttypes "github.com/jaypipes/gdt-core/types"
 	"github.com/samber/lo"
 	"gopkg.in/yaml.v3"
 )
@@ -81,7 +81,7 @@ func (s *Spec) UnmarshalYAML(node *yaml.Node) error {
 			}
 			s.Response = ra
 		default:
-			if lo.Contains(spec.BaseFields, key) {
+			if lo.Contains(gdttypes.BaseSpecFields, key) {
 				continue
 			}
 			return errors.UnknownFieldAt(key, keyNode)

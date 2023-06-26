@@ -5,13 +5,12 @@
 package http
 
 import (
-	"github.com/jaypipes/gdt-core/spec"
+	gdttypes "github.com/jaypipes/gdt-core/types"
 )
 
 // Spec describes a test of a single HTTP request and response
 type Spec struct {
-	spec.Spec
-	defaults *Defaults
+	gdttypes.Spec
 	// URL being called by HTTP client
 	URL string `yaml:"url,omitempty"`
 	// HTTP Method specified by HTTP client
@@ -40,4 +39,12 @@ func (s *Spec) Title() string {
 		return s.Name
 	}
 	return s.Method + ":" + s.URL
+}
+
+func (s *Spec) SetBase(b gdttypes.Spec) {
+	s.Spec = b
+}
+
+func (s *Spec) Base() *gdttypes.Spec {
+	return &s.Spec
 }

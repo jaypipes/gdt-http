@@ -9,6 +9,7 @@ import (
 
 	gdtcontext "github.com/jaypipes/gdt-core/context"
 	"github.com/jaypipes/gdt-core/errors"
+	gdttypes "github.com/jaypipes/gdt-core/types"
 	"gopkg.in/yaml.v3"
 )
 
@@ -76,4 +77,16 @@ func (d *Defaults) BaseURLFromContext(ctx context.Context) string {
 		}
 	}
 	return ""
+}
+
+// fromBaseDefaults returns an gdt-http plugin-specific Defaults from a Spec
+func fromBaseDefaults(base *gdttypes.Defaults) *Defaults {
+	if base == nil {
+		return nil
+	}
+	d := base.For(pluginName)
+	if d == nil {
+		return nil
+	}
+	return d.(*Defaults)
 }

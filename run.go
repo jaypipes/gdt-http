@@ -57,7 +57,9 @@ func (s *Spec) getURL(ctx context.Context) (string, error) {
 		}
 		return url.String(), nil
 	}
-	base := s.defaults.BaseURLFromContext(ctx)
+
+	d := fromBaseDefaults(s.Defaults)
+	base := d.BaseURLFromContext(ctx)
 	return base + s.URL, nil
 }
 

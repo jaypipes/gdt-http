@@ -15,7 +15,6 @@ import (
 	gdtcontext "github.com/jaypipes/gdt-core/context"
 	"github.com/jaypipes/gdt-core/errors"
 	"github.com/jaypipes/gdt-core/scenario"
-	"github.com/jaypipes/gdt-core/spec"
 	gdttypes "github.com/jaypipes/gdt-core/types"
 	gdthttp "github.com/jaypipes/gdt-http"
 	"github.com/stretchr/testify/assert"
@@ -134,11 +133,12 @@ func TestParse(t *testing.T) {
 
 	assert.IsType(&scenario.Scenario{}, s)
 	sc := s.(*scenario.Scenario)
-	expTests := []gdttypes.Spec{
+	expTests := []gdttypes.TestUnit{
 		&gdthttp.Spec{
-			Spec: spec.Spec{
-				Index: 0,
-				Name:  "no such book was found",
+			Spec: gdttypes.Spec{
+				Index:    0,
+				Name:     "no such book was found",
+				Defaults: &gdttypes.Defaults{},
 			},
 			Method: "GET",
 			URL:    "/books/nosuchbook",
@@ -151,9 +151,10 @@ func TestParse(t *testing.T) {
 			},
 		},
 		&gdthttp.Spec{
-			Spec: spec.Spec{
-				Index: 1,
-				Name:  "list all books",
+			Spec: gdttypes.Spec{
+				Index:    1,
+				Name:     "list all books",
+				Defaults: &gdttypes.Defaults{},
 			},
 			Method: "GET",
 			URL:    "/books",
@@ -166,9 +167,10 @@ func TestParse(t *testing.T) {
 			},
 		},
 		&gdthttp.Spec{
-			Spec: spec.Spec{
-				Index: 2,
-				Name:  "create a new book",
+			Spec: gdttypes.Spec{
+				Index:    2,
+				Name:     "create a new book",
+				Defaults: &gdttypes.Defaults{},
 			},
 			Method: "POST",
 			URL:    "/books",
@@ -188,9 +190,10 @@ func TestParse(t *testing.T) {
 			},
 		},
 		&gdthttp.Spec{
-			Spec: spec.Spec{
-				Index: 3,
-				Name:  "look up that created book",
+			Spec: gdttypes.Spec{
+				Index:    3,
+				Name:     "look up that created book",
+				Defaults: &gdttypes.Defaults{},
 			},
 			Method: "GET",
 			URL:    "$LOCATION",
@@ -209,9 +212,10 @@ func TestParse(t *testing.T) {
 			},
 		},
 		&gdthttp.Spec{
-			Spec: spec.Spec{
-				Index: 4,
-				Name:  "create two books",
+			Spec: gdttypes.Spec{
+				Index:    4,
+				Name:     "create two books",
+				Defaults: &gdttypes.Defaults{},
 			},
 			Method: "PUT",
 			URL:    "/books",
