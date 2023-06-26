@@ -41,8 +41,8 @@ func (d *Defaults) UnmarshalYAML(node *yaml.Node) error {
 		valNode := node.Content[i+1]
 		switch key {
 		case "http":
-			if valNode.Kind != yaml.ScalarNode {
-				return errors.ExpectedScalarAt(valNode)
+			if valNode.Kind != yaml.MappingNode {
+				return errors.ExpectedMapAt(valNode)
 			}
 			hd := httpDefaults{}
 			if err := valNode.Decode(&hd); err != nil {

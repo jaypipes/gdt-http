@@ -27,6 +27,27 @@ func currentDir() string {
 	return filepath.Dir(filename)
 }
 
+func TestBadDefaults(t *testing.T) {
+	assert := assert.New(t)
+	require := require.New(t)
+
+	fp := filepath.Join("testdata", "failures", "bad-defaults.yaml")
+	f, err := os.Open(fp)
+	require.Nil(err)
+
+	ctx := gdtcontext.New()
+	ctx = gdtcontext.RegisterPlugin(ctx, gdthttp.Plugin())
+
+	s, err := scenario.FromReader(
+		f,
+		scenario.WithPath(fp),
+		scenario.WithContext(ctx),
+	)
+	assert.NotNil(err)
+	assert.ErrorIs(err, errors.ErrInvalidExpectedMap)
+	assert.Nil(s)
+}
+
 func TestParseFailures(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
@@ -52,7 +73,7 @@ func TestMissingSchema(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
 
-	fp := filepath.Join("testdata", "missing-schema.yaml")
+	fp := filepath.Join("testdata", "failures", "missing-schema.yaml")
 	f, err := os.Open(fp)
 	require.Nil(err)
 
