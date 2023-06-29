@@ -325,15 +325,15 @@ JSONSchema plus the "uuid4" variant:
 * "uuid": must be any version of UUID
 * "uuid4": must be a UUID version 4
 
-### `$LOCATION`
+### `$$LOCATION`
 
-The `url` attribute of an HTTP test spec can be the string `$LOCATION`. When
-this is set, the HTTP request will be to the URL specified in the *previous
-HTTP response's* Location HTTP header. This is an easy shortcut for testing a
-series of ordered HTTP requests, where the first HTTP request (typically a
-`POST` or `PUT` to a particular resource) responds with a Location HTTP header
-pointing to a URL that can have issued an HTTP `GET` request to return
-information about the previously created or mutated resource.
+The `url` attribute of an HTTP test spec can be the special string
+`$$LOCATION`. When this is set, the HTTP request will be to the URL specified
+in the *previous HTTP response's* Location HTTP header. This is an easy
+shortcut for testing a series of ordered HTTP requests, where the first HTTP
+request (typically a `POST` or `PUT` to a particular resource) responds with a
+Location HTTP header pointing to a URL that can have issued an HTTP `GET`
+request to return information about the previously created or mutated resource.
 
 ### Response assertions
 
@@ -391,7 +391,7 @@ tests:
      headers:
       - Location
  - name: look up that created book
-   GET: $LOCATION
+   GET: $$LOCATION
    response:
      status: 200
      json:

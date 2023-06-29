@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/PaesslerAG/jsonpath v0.1.1
 	github.com/google/uuid v1.3.0
-	github.com/jaypipes/gdt-core v1.7.0
+	github.com/jaypipes/gdt-core v1.8.0
 	github.com/samber/lo v1.38.1
 	github.com/stretchr/testify v1.8.4
 	github.com/xeipuuv/gojsonschema v1.2.0
