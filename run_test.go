@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/jaypipes/gdt"
 	gdtcontext "github.com/jaypipes/gdt-core/context"
 	gdterrors "github.com/jaypipes/gdt-core/errors"
 	"github.com/jaypipes/gdt-core/fixture"
@@ -157,7 +158,26 @@ func TestGetBooks(t *testing.T) {
 	require.Nil(err)
 	require.NotNil(s)
 
-	s.Run(ctx, t)
+	err = s.Run(ctx, t)
+	require.Nil(err)
+}
+
+func TestGetBooksUsingGDT(t *testing.T) {
+	// This is testing that the plugin registration for the gdt module (and
+	// thus the lack of need to manually register the HTTP plugin) is working
+	// properly.
+	require := require.New(t)
+
+	fp := filepath.Join("testdata", "get-books.yaml")
+
+	s, err := gdt.From(fp)
+	require.Nil(err)
+	require.NotNil(s)
+
+	ctx := gdt.NewContext()
+	ctx = setup(ctx)
+	err = s.Run(ctx, t)
+	require.Nil(err)
 }
 
 func TestPutMultipleBooks(t *testing.T) {

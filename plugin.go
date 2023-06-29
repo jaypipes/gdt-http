@@ -5,9 +5,14 @@
 package http
 
 import (
+	"github.com/jaypipes/gdt"
 	gdttypes "github.com/jaypipes/gdt-core/types"
 	"gopkg.in/yaml.v3"
 )
+
+func init() {
+	gdt.RegisterPlugin(Plugin())
+}
 
 const (
 	pluginName = "http"
