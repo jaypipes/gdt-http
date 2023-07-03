@@ -5,43 +5,25 @@
 package http
 
 import (
-	"encoding/json"
 	nethttp "net/http"
 	"strings"
 	"testing"
 
-	"github.com/PaesslerAG/jsonpath"
+	gdtjson "github.com/jaypipes/gdt-core/assertion/json"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	gjs "github.com/xeipuuv/gojsonschema"
 )
 
 const (
-	msgHTTPStatus          = "Expected HTTP response to have status code of %d but got %d"
-	msgJSONLength          = "Expected HTTP response to have JSON length of %d but got %d"
-	msgJSONUnmarshalError  = "Failed to unmarshal JSON: %s"
-	msgJSONPathError       = "Failed to find JSONPath %s: %s"
-	msgJSONPathStringValue = "Expected string value at JSONPath %s but got JSONPath value %v which is not convertable to string"
-	msgJSONSchemaInvalid   = "Expected JSON to validate against JSONSchema, but found validation errors:\n%s"
-	msgStringInBody        = "Expected HTTP response to contain %s"
-	msgHeaderIn            = "Expected HTTP header %s to be in response"
-	msgHeaderValue         = "Expected HTTP header with value %s to be in response"
-	msgFormatInvalid       = "Unknown format %s in test"
-	msgFormatBad           = "Expected %s to be formatted as %s"
+	msgHTTPStatus   = "Expected HTTP response to have status code of %d but got %d"
+	msgStringInBody = "Expected HTTP response to contain %s"
+	msgHeaderIn     = "Expected HTTP header %s to be in response"
+	msgHeaderValue  = "Expected HTTP header with value %s to be in response"
 )
-
-// JSONAssertions represents one or more assertions about JSON data responses
-type JSONAssertions struct {
-	Length      *uint             `yaml:"length,omitempty"`
-	Paths       map[string]string `yaml:"paths,omitempty"`
-	PathFormats map[string]string `yaml:"path_formats,omitempty"`
-	Schema      string            `yaml:"schema,omitempty"`
-}
 
 // ResponseAssertions contains one or more assertions about an HTTP response
 type ResponseAssertions struct {
 	// JSON contains the assertions about JSON data in the response
-	JSON *JSONAssertions `yaml:"json,omitempty"`
+	JSON *gdtjson.Expect `yaml:"json,omitempty"`
 	// Headers contains a list of HTTP headers that should be in the response
 	Headers []string `yaml:"headers,omitempty"`
 	// Strings contains a list of strings that should be present in the
@@ -80,99 +62,4 @@ func assertHeader(t *testing.T, r *nethttp.Response, exp string) {
 		val := r.Header.Get(exp)
 		assert.NotEmpty(t, val, msgHeaderIn, exp)
 	}
-}
-
-func assertJSON(t *testing.T, r *nethttp.Response, b []byte, jspec *JSONAssertions) {
-	t.Helper()
-	if jspec.Length != nil {
-		// An error may have been returned as plain/text. In this case, we
-		// don't want to check the length of the JSON-serialized body
-		if strings.HasPrefix(r.Header.Get("content-type"), "application/json") {
-			assertJSONLen(t, r, b, *(jspec.Length))
-		}
-	}
-	if len(jspec.Paths) > 0 {
-		assertJSONPaths(t, r, b, jspec.Paths)
-	}
-	if len(jspec.PathFormats) > 0 {
-		assertJSONPathFormats(t, r, b, jspec.PathFormats)
-	}
-	if jspec.Schema != "" {
-		assertJSONSchema(t, r, b, jspec.Schema)
-	}
-}
-
-func assertJSONLen(t *testing.T, r *nethttp.Response, b []byte, exp uint) {
-	t.Helper()
-	assert.Equal(t, exp, uint(len(b)), msgJSONLength, exp, len(b))
-}
-
-func assertJSONPaths(t *testing.T, r *nethttp.Response, b []byte, paths map[string]string) {
-	t.Helper()
-	v := interface{}(nil)
-	err := json.Unmarshal(b, &v)
-	require.Nil(t, err, msgJSONUnmarshalError, err)
-	for path, expVal := range paths {
-		assertJSONPath(t, r, path, expVal, v)
-	}
-}
-
-func assertJSONPath(t *testing.T, r *nethttp.Response, path string, exp string, v interface{}) {
-	t.Helper()
-	got, err := jsonpath.Get(path, v)
-	require.Nil(t, err, msgJSONPathError, path, err)
-	gotStr, ok := got.(string)
-	assert.True(t, ok, msgJSONPathStringValue, path, got)
-	assert.Equal(t, exp, gotStr)
-}
-
-func assertJSONPathFormats(t *testing.T, r *nethttp.Response, b []byte, pathFormats map[string]string) {
-	t.Helper()
-	v := interface{}(nil)
-	err := json.Unmarshal(b, &v)
-	require.Nil(t, err, msgJSONUnmarshalError, err)
-	for path, format := range pathFormats {
-		assertJSONPathFormat(t, r, path, format, v)
-	}
-}
-
-func assertJSONPathFormat(t *testing.T, r *nethttp.Response, path string, format string, v interface{}) {
-	t.Helper()
-	got, err := jsonpath.Get(path, v)
-	require.Nil(t, err, msgJSONPathError, path, err)
-	gotStr, ok := got.(string)
-	assert.True(t, ok, msgJSONPathStringValue, path, got)
-	ok, err = isFormatted(format, got)
-	require.Nil(t, err, msgFormatInvalid, format)
-	assert.True(t, ok, msgFormatBad, format, gotStr)
-}
-
-// assertJSONSchema verifies that the HTTP response validates against a
-// supplied JSONSchema document
-//
-// NOTE(jaypipes): schemaPath is an absolute path and should be checked for
-// existence before running this function
-func assertJSONSchema(
-	t *testing.T,
-	r *nethttp.Response,
-	subject []byte,
-	schemaPath string,
-) {
-	t.Helper()
-
-	schemaLoader := gjs.NewReferenceLoader(schemaPath)
-	docLoader := gjs.NewStringLoader(string(subject))
-
-	res, err := gjs.Validate(schemaLoader, docLoader)
-	require.Nil(t, err)
-
-	var errStr string
-	if len(res.Errors()) > 0 {
-		errStrs := make([]string, len(res.Errors()))
-		for x, e := range res.Errors() {
-			errStrs[x] = e.String()
-		}
-		errStr = "- " + strings.Join(errStrs, "\n- ")
-	}
-	assert.True(t, res.Valid(), msgJSONSchemaInvalid, errStr)
 }

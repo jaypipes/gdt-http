@@ -5,7 +5,7 @@ tests:
    GET: /books/nosuchbook
    response:
      json:
-       length: 0
+       len: 0
      status: 404
  - name: list all books
    GET: /books

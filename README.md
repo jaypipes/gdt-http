@@ -62,8 +62,8 @@ The `response` object has the following attributes:
 
 The `json` object has the following attributes:
 
-* `length`: (optional) integer representing the number of bytes in the
- resulting JSON object after successfully parsing the HTTP response body
+* `len`: (optional) integer representing the number of bytes in the resulting
+  JSON object after successfully parsing the HTTP response body
 * `paths`: (optional) map of strings where the keys of the map are JSONPath
   expressions and the values of the map are the expected value to be found when
   evaluating the JSONPath expression
@@ -360,13 +360,13 @@ tests:
    GET: /books/nosuchbook
    response:
      json:
-       length: 0
+       len: 0
      status: 404
  - name: invalid query parameter is supplied
    GET: /books?invalidparam=1
    response:
      json:
-       length: 0
+       len: 0
      status: 400
      strings:
        - invalid parameter

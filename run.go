@@ -16,6 +16,7 @@ import (
 	"strings"
 	"testing"
 
+	gdtjson "github.com/jaypipes/gdt-core/assertion/json"
 	gdtcontext "github.com/jaypipes/gdt-core/context"
 	"github.com/jaypipes/gdt-core/result"
 	"github.com/stretchr/testify/require"
@@ -235,7 +236,12 @@ func (s *Spec) Run(ctx context.Context, t *testing.T) error {
 			}
 
 			if rspec.JSON != nil {
-				assertJSON(t, resp, b, rspec.JSON)
+				ja := gdtjson.New(rspec.JSON, b)
+				if !ja.OK() {
+					for _, failure := range ja.Failures() {
+						t.Error(failure)
+					}
+				}
 			}
 
 			if len(rspec.Strings) > 0 {

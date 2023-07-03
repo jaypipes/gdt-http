@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	gdtjson "github.com/jaypipes/gdt-core/assertion/json"
 	gdtcontext "github.com/jaypipes/gdt-core/context"
 	"github.com/jaypipes/gdt-core/errors"
 	"github.com/jaypipes/gdt-core/scenario"
@@ -111,7 +112,7 @@ func TestParse(t *testing.T) {
 	code404 := 404
 	code200 := 200
 	code201 := 201
-	len0 := uint(0)
+	len0 := 0
 	dateOnly := "2006-01-02"
 	publishedOn1940, _ := time.Parse(dateOnly, "1940-10-21")
 	publishedOn1937, _ := time.Parse(dateOnly, "1937-10-15")
@@ -144,8 +145,8 @@ func TestParse(t *testing.T) {
 			URL:    "/books/nosuchbook",
 			GET:    "/books/nosuchbook",
 			Response: &gdthttp.ResponseAssertions{
-				JSON: &gdthttp.JSONAssertions{
-					Length: &len0,
+				JSON: &gdtjson.Expect{
+					Len: &len0,
 				},
 				Status: &code404,
 			},
@@ -160,7 +161,7 @@ func TestParse(t *testing.T) {
 			URL:    "/books",
 			GET:    "/books",
 			Response: &gdthttp.ResponseAssertions{
-				JSON: &gdthttp.JSONAssertions{
+				JSON: &gdtjson.Expect{
 					Schema: schemaPath,
 				},
 				Status: &code200,
@@ -199,7 +200,7 @@ func TestParse(t *testing.T) {
 			URL:    "$LOCATION",
 			GET:    "$LOCATION",
 			Response: &gdthttp.ResponseAssertions{
-				JSON: &gdthttp.JSONAssertions{
+				JSON: &gdtjson.Expect{
 					Paths: map[string]string{
 						"$.author.name":             "Ernest Hemingway",
 						"$.publisher.address.state": "NY",
