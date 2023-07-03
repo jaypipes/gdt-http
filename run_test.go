@@ -7,7 +7,6 @@ package http_test
 import (
 	"context"
 	"encoding/json"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -16,7 +15,7 @@ import (
 	"github.com/jaypipes/gdt"
 	gdtcontext "github.com/jaypipes/gdt-core/context"
 	gdterrors "github.com/jaypipes/gdt-core/errors"
-	"github.com/jaypipes/gdt-core/fixture"
+	jsonfix "github.com/jaypipes/gdt-core/fixture/json"
 	"github.com/jaypipes/gdt-core/scenario"
 	gdttypes "github.com/jaypipes/gdt-core/types"
 	gdthttp "github.com/jaypipes/gdt-http"
@@ -52,8 +51,7 @@ func dataFixture() gdttypes.Fixture {
 	if err != nil {
 		panic(err)
 	}
-	f.Seek(0, io.SeekStart)
-	fix, err := fixture.JSON(f)
+	fix, err := jsonfix.New(f)
 	if err != nil {
 		panic(err)
 	}

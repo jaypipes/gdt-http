@@ -5,9 +5,6 @@
 package http
 
 import (
-	"os"
-	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/jaypipes/gdt-core/errors"
@@ -75,11 +72,11 @@ func (s *Spec) UnmarshalYAML(node *yaml.Node) error {
 			if valNode.Kind != yaml.MappingNode {
 				return errors.ExpectedMapAt(valNode)
 			}
-			var ra *ResponseAssertions
-			if err := valNode.Decode(&ra); err != nil {
+			var exp *Expect
+			if err := valNode.Decode(&exp); err != nil {
 				return err
 			}
-			s.Response = ra
+			s.Response = exp
 		default:
 			if lo.Contains(gdttypes.BaseSpecFields, key) {
 				continue
@@ -87,7 +84,7 @@ func (s *Spec) UnmarshalYAML(node *yaml.Node) error {
 			return errors.UnknownFieldAt(key, keyNode)
 		}
 	}
-	if err := validateResponseAssertions(s.Response); err != nil {
+	if err := validateExpect(s.Response); err != nil {
 		return err
 	}
 	if err := validateMethodAndURL(s); err != nil {
@@ -128,39 +125,12 @@ func validateMethodAndURL(s *Spec) error {
 	return nil
 }
 
-func validateResponseAssertions(resp *ResponseAssertions) error {
-	if resp == nil {
+func validateExpect(exp *Expect) error {
+	if exp == nil {
 		return nil
 	}
-	if resp.JSON == nil {
+	if exp.JSON == nil {
 		return nil
 	}
-	if resp.JSON.Schema == "" {
-		return nil
-	}
-	// Ensure any JSONSchema URL specified in response.json.schema exists
-	schemaURL := resp.JSON.Schema
-	if strings.HasPrefix(schemaURL, "http://") || strings.HasPrefix(schemaURL, "https://") {
-		// TODO(jaypipes): Support network lookups?
-		return UnsupportedJSONSchemaReference(schemaURL)
-	}
-	// Convert relative filepaths to absolute filepaths rooted in the context's
-	// testdir after stripping any "file://" scheme prefix
-	schemaURL = strings.TrimPrefix(schemaURL, "file://")
-	schemaURL, _ = filepath.Abs(schemaURL)
-
-	f, err := os.Open(schemaURL)
-	if err != nil {
-		return JSONSchemaFileNotFound(schemaURL)
-	}
-	defer f.Close()
-	if runtime.GOOS == "windows" {
-		// Need to do this because of an "optimization" done in the
-		// gojsonreference library:
-		// https://github.com/xeipuuv/gojsonreference/blob/bd5ef7bd5415a7ac448318e64f11a24cd21e594b/reference.go#L107-L114
-		resp.JSON.Schema = "file:///" + schemaURL
-	} else {
-		resp.JSON.Schema = "file://" + schemaURL
-	}
-	return nil
+	return exp.JSON.Valid()
 }

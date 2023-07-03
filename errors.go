@@ -27,28 +27,31 @@ var (
 		"%w: expected Location HTTP Header in previous response",
 		gdterrors.ErrRuntime,
 	)
-	// ErrJSONSchemaFileNotFound indicates a specified JSONSchema file could
-	// not be found.
-	ErrJSONSchemaFileNotFound = fmt.Errorf(
-		"%w: unable to find JSONSchema file",
-		gdterrors.ErrInvalid,
-	)
-	// ErrUnsupportedJSONSchemaReference indicates that a specified JSONSchema
-	// file is referenced as an HTTP(S) URL instead of a file URI.
-	ErrUnsupportedJSONSchemaReference = fmt.Errorf(
-		"%w: unsupported JSONSchema reference",
-		gdterrors.ErrInvalid,
-	)
 )
 
-// UnsupportedJSONSchemaReference returns ErrUnsupportedJSONSchemaReference for
-// a supplied URL.
-func UnsupportedJSONSchemaReference(url string) error {
-	return fmt.Errorf("%w: %s", ErrUnsupportedJSONSchemaReference, url)
+// HTTPStatusNotEqual returns an ErrNotEqual when an expected thing doesn't equal an
+// observed thing.
+func HTTPStatusNotEqual(exp, got interface{}) error {
+	return fmt.Errorf(
+		"%w: expected HTTP status %v but got %v",
+		gdterrors.ErrNotEqual, exp, got,
+	)
 }
 
-// JSONSchemaFileNotFound returns ErrJSONSchemaFileNotFound for a supplied
-// path.
-func JSONSchemaFileNotFound(path string) error {
-	return fmt.Errorf("%w: %s", ErrJSONSchemaFileNotFound, path)
+// HTTPHeaderNotIn returns an ErrNotIn when an expected header doesn't appear
+// in a response's headers.
+func HTTPHeaderNotIn(element, container interface{}) error {
+	return fmt.Errorf(
+		"%w: expected HTTP headers %v to contain %v",
+		gdterrors.ErrNotIn, container, element,
+	)
+}
+
+// HTTPNotInBody returns an ErrNotIn when an expected thing doesn't appear in a
+// a response's Body.
+func HTTPNotInBody(element string) error {
+	return fmt.Errorf(
+		"%w: expected HTTP body to contain %v",
+		gdterrors.ErrNotIn, element,
+	)
 }

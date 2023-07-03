@@ -16,7 +16,6 @@ import (
 	"strings"
 	"testing"
 
-	gdtjson "github.com/jaypipes/gdt-core/assertion/json"
 	gdtcontext "github.com/jaypipes/gdt-core/context"
 	"github.com/jaypipes/gdt-core/result"
 	"github.com/stretchr/testify/require"
@@ -224,37 +223,22 @@ func (s *Spec) Run(ctx context.Context, t *testing.T) error {
 			resp.Body.Close()
 		}()
 
-		if s.Response != nil {
+		exp := s.Response
+		if exp != nil {
 			// Only read the response body contents once and pass the byte
 			// buffer to the assertion functions
 			b, err := ioutil.ReadAll(resp.Body)
-			require.Nil(t, err)
-
-			rspec := s.Response
-			if rspec.Status != nil {
-				assertHTTPStatusEqual(t, resp, *(rspec.Status))
+			if err != nil {
+				rerr = err
+				return
 			}
-
-			if rspec.JSON != nil {
-				ja := gdtjson.New(rspec.JSON, b)
-				if !ja.OK() {
-					for _, failure := range ja.Failures() {
-						t.Error(failure)
-					}
+			a := newAssertions(exp, resp, b)
+			if !a.OK() {
+				for _, failure := range a.Failures() {
+					t.Error(failure)
 				}
 			}
 
-			if len(rspec.Strings) > 0 {
-				for _, exp := range rspec.Strings {
-					assertStringInBody(t, resp, b, exp)
-				}
-			}
-
-			if len(rspec.Headers) > 0 {
-				for _, exp := range rspec.Headers {
-					assertHeader(t, resp, exp)
-				}
-			}
 		}
 		runData.Response = resp
 	})
