@@ -29,7 +29,15 @@ type Expect struct {
 // headerEqual returns true if the supplied http.Response contains an expected
 // HTTP header
 func headerEqual(r *nethttp.Response, exp string) bool {
-	key, val, _ := strings.Cut(exp, ":")
+	key, val, wantVal := strings.Cut(exp, ":")
+	_, ok := r.Header[key]
+	if !ok {
+		return false
+	}
+	if !wantVal {
+		// We were only looking for the Header key, didn't care about value.
+		return true
+	}
 	valGot := r.Header.Get(key)
 	if valGot == "" {
 		return false
@@ -90,8 +98,8 @@ func (a *assertions) OK() bool {
 		got := a.r.StatusCode
 		if *exp.Status != got {
 			a.Fail(HTTPStatusNotEqual(*exp.Status, got))
+			return false
 		}
-		return false
 	}
 	if exp.JSON != nil {
 		ja := gdtjson.New(exp.JSON, a.b)
