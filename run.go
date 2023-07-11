@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	gdtcontext "github.com/jaypipes/gdt-core/context"
+	gdtdebug "github.com/jaypipes/gdt-core/debug"
 	"github.com/jaypipes/gdt-core/result"
 	"github.com/stretchr/testify/require"
 )
@@ -185,13 +186,6 @@ func (s *Spec) preprocessMapValue(
 // Run executes the test described by the HTTP test. A new HTTP request and
 // response pair is created during this call.
 func (s *Spec) Run(ctx context.Context, t *testing.T) error {
-	var body io.Reader
-	if s.Data != nil {
-		s.processRequestData(ctx)
-		jsonBody, err := json.Marshal(s.Data)
-		require.Nil(t, err)
-		body = bytes.NewReader(jsonBody)
-	}
 	runData := &RunData{}
 	var rerr error
 	t.Run(s.Title(), func(t *testing.T) {
@@ -199,6 +193,21 @@ func (s *Spec) Run(ctx context.Context, t *testing.T) error {
 		if err != nil {
 			rerr = err
 			return
+		}
+
+		gdtdebug.Println(ctx, "http: > %s %s", s.Method, url)
+		var body io.Reader
+		if s.Data != nil {
+			s.processRequestData(ctx)
+			jsonBody, err := json.Marshal(s.Data)
+			require.Nil(t, err)
+			b := bytes.NewReader(jsonBody)
+			if b.Size() > 0 {
+				sendData, _ := io.ReadAll(b)
+				gdtdebug.Println(ctx, "http: > %s", sendData)
+				b.Seek(0, 0)
+			}
+			body = b
 		}
 
 		req, err := nethttp.NewRequest(s.Method, url, body)
@@ -216,6 +225,7 @@ func (s *Spec) Run(ctx context.Context, t *testing.T) error {
 			rerr = err
 			return
 		}
+		gdtdebug.Println(ctx, "http: < %d", resp.StatusCode)
 
 		// Make sure we drain and close our response body...
 		defer func() {
@@ -223,15 +233,18 @@ func (s *Spec) Run(ctx context.Context, t *testing.T) error {
 			resp.Body.Close()
 		}()
 
+		// Only read the response body contents once and pass the byte
+		// buffer to the assertion functions
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			rerr = err
+			return
+		}
+		if len(b) > 0 {
+			gdtdebug.Println(ctx, "http: < %s", b)
+		}
 		exp := s.Response
 		if exp != nil {
-			// Only read the response body contents once and pass the byte
-			// buffer to the assertion functions
-			b, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				rerr = err
-				return
-			}
 			a := newAssertions(exp, resp, b)
 			if !a.OK() {
 				for _, failure := range a.Failures() {
