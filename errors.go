@@ -11,13 +11,12 @@ import (
 )
 
 var (
-	// ErrInvalidAliasOrURL is returned when the test author failed to provide
-	// either a URL and Method or specify one of the aliases like GET, POST, or
-	// DELETE
-	ErrInvalidAliasOrURL = fmt.Errorf(
+	// ErrAliasOrURL is returned when the test author failed to provide either
+	// a URL and Method or specify one of the aliases like GET, POST, or DELETE
+	ErrAliasOrURL = fmt.Errorf(
 		"%w: either specify a URL and Method or specify one "+
 			"of GET, POST, PUT, PATCH or DELETE",
-		gdterrors.ErrInvalid,
+		gdterrors.ErrParse,
 	)
 	// ErrExpectedLocationHeader indicates that the user specified the special
 	// `$LOCATION` string in the `url` or `GET` fields of the HTTP test spec

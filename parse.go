@@ -84,9 +84,6 @@ func (s *Spec) UnmarshalYAML(node *yaml.Node) error {
 			return errors.UnknownFieldAt(key, keyNode)
 		}
 	}
-	if err := validateExpect(s.Response); err != nil {
-		return err
-	}
 	if err := validateMethodAndURL(s); err != nil {
 		return err
 	}
@@ -116,21 +113,11 @@ func validateMethodAndURL(s *Spec) error {
 			s.URL = s.PATCH
 			return nil
 		} else {
-			return ErrInvalidAliasOrURL
+			return ErrAliasOrURL
 		}
 	}
 	if s.Method == "" {
-		return ErrInvalidAliasOrURL
+		return ErrAliasOrURL
 	}
 	return nil
-}
-
-func validateExpect(exp *Expect) error {
-	if exp == nil {
-		return nil
-	}
-	if exp.JSON == nil {
-		return nil
-	}
-	return exp.JSON.Valid()
 }

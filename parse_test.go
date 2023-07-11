@@ -44,7 +44,7 @@ func TestBadDefaults(t *testing.T) {
 		scenario.WithContext(ctx),
 	)
 	assert.NotNil(err)
-	assert.ErrorIs(err, errors.ErrInvalidExpectedMap)
+	assert.ErrorIs(err, errors.ErrExpectedMap)
 	assert.Nil(s)
 }
 
@@ -65,7 +65,7 @@ func TestParseFailures(t *testing.T) {
 		scenario.WithContext(ctx),
 	)
 	assert.NotNil(err)
-	assert.ErrorIs(err, errors.ErrInvalid)
+	assert.ErrorIs(err, errors.ErrExpectedMap)
 	assert.Nil(s)
 }
 
@@ -86,7 +86,7 @@ func TestMissingSchema(t *testing.T) {
 		scenario.WithContext(ctx),
 	)
 	assert.NotNil(err)
-	assert.ErrorIs(err, errors.ErrInvalid)
+	assert.ErrorIs(err, gdtjson.ErrJSONSchemaFileNotFound)
 	assert.Nil(s)
 }
 
