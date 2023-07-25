@@ -1,0 +1,52 @@
+name: parse
+description: a scenario with several well-formed HTTP test specs
+tests:
+ - name: no such book was found
+   GET: /books/nosuchbook
+   response:
+     json:
+       len: 0
+     status: 404
+ - name: list all books
+   GET: /books
+   response:
+     status: 200
+     json:
+       schema: testdata/schemas/get_books.json
+ - name: create a new book
+   POST: /books
+   data:
+     title: For Whom The Bell Tolls
+     published_on: 1940-10-21
+     pages: 480
+     author_id: $.authors.by_name["Ernest Hemingway"].id
+     publisher_id: $.publishers.by_name["Charles Scribner's Sons"].id
+   response:
+     status: 201
+     headers:
+      - Location
+ - name: look up that created book
+   GET: $$LOCATION
+   response:
+     status: 200
+     json:
+       paths:
+         $.author.name: Ernest Hemingway
+         $.publisher.address.state: NY
+       path_formats:
+         $.id: uuid4
+ - name: create two books
+   PUT: /books
+   data:
+    - title: For Whom The Bell Tolls
+      published_on: 1940-10-21
+      pages: 480
+      author_id: $.authors.by_name["Ernest Hemingway"].id
+      publisher_id: $.publishers.by_name["Charles Scribner's Sons"].id
+    - title: To Have and Have Not
+      published_on: 1937-10-15
+      pages: 257
+      author_id: $.authors.by_name["Ernest Hemingway"].id
+      publisher_id: $.publishers.by_name["Charles Scribner's Sons"].id
+   response:
+     status: 200

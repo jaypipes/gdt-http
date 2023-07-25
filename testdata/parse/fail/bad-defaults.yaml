@@ -1,0 +1,6 @@
+name: bad-defaults
+description: a scenario with an invalid http defaults definition
+defaults:
+  http: shouldbeamap
+tests:
+ - GET: /books/nosuchbook
