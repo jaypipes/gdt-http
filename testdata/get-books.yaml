@@ -1,4 +1,4 @@
-require:
+fixtures:
  - books_api
  - books_data
 tests:

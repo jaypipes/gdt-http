@@ -156,7 +156,7 @@ It would be much more readable if we could replace those hard-coded `"1"`
 values with a reference to some fixture data:
 
 ```yaml
-requires:
+fixtures:
  - books_api
  - books_data
 tests:
@@ -239,14 +239,16 @@ We can register a `gdt.fixtures.JSONFixture` that contains the data in
 	gdt.RegisterFixture("books_data", dataFixture)
 ```
 
-To reference any of the data in your `gdt.fixtures.JSONFixture` from your test unit, just make sure the fixture is listed in the test file's `requires` field:
+To reference any of the data in your `gdt.fixtures.JSONFixture` from your test
+unit, just make sure the fixture is listed in the test file's `fixtures` field:
 
 ```
 require:
  - books_data
 ```
 
-Then you can grab any data in the fixture using a JSONPath expression in the `data` contents:
+Then you can grab any data in the fixture using a JSONPath expression in the
+`data` contents:
 
 ```yaml
    data:
@@ -356,7 +358,7 @@ Use the `response.strings` field to check for the existence of one of more
 strings in the HTTP response body.
 
 ```yaml
-require:
+fixtures:
  - books_api
 tests:
  - name: invalid query parameter is supplied
@@ -373,7 +375,7 @@ Use the `response.headers` field to check for the existence of one of
 more HTTP headers in the HTTP response.
 
 ```yaml
-require:
+fixtures:
  - books_api
 tests:
  - name: invalid query parameter is supplied
@@ -395,7 +397,7 @@ format.
 [`examples/books/tests/api/create_then_get.yaml`](../examples/books/tests/api/create_then_get.yaml):
 
 ```yaml
-require:
+fixtures:
  - books_api
 tests:
  - name: create a new book
@@ -430,7 +432,7 @@ HTTP response body should adhere to.
 [`examples/books/tests/api/get_books.yaml`](../examples/books/tests/api/get_books.yaml):
 
 ```yaml
-require:
+fixtures:
  - books_api
  - books_data
 tests:

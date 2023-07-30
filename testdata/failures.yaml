@@ -1,4 +1,4 @@
-require:
+fixtures:
  - books_api
 tests:
  - name: no such book was found

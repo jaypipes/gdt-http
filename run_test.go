@@ -65,8 +65,8 @@ func TestFixturesNotSetup(t *testing.T) {
 	require.NotNil(s)
 
 	err = s.Run(context.TODO(), t)
-	assert.NotNil(err)
-	assert.ErrorIs(err, gdterrors.ErrRuntime)
+	require.NotNil(err)
+	assert.ErrorIs(err, gdterrors.RuntimeError)
 }
 
 func setup(ctx context.Context) context.Context {

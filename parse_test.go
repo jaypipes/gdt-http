@@ -14,7 +14,6 @@ import (
 	"github.com/gdt-dev/gdt"
 	gdtjson "github.com/gdt-dev/gdt/assertion/json"
 	"github.com/gdt-dev/gdt/errors"
-	"github.com/gdt-dev/gdt/scenario"
 	gdttypes "github.com/gdt-dev/gdt/types"
 	gdthttp "github.com/gdt-dev/http"
 	"github.com/stretchr/testify/assert"
@@ -67,9 +66,9 @@ func TestParse(t *testing.T) {
 
 	fp := filepath.Join("testdata", "parse.yaml")
 
-	s, err := gdt.From(fp)
+	suite, err := gdt.From(fp)
 	require.Nil(err)
-	require.NotNil(s)
+	require.NotNil(suite)
 
 	code404 := 404
 	code200 := 200
@@ -94,9 +93,10 @@ func TestParse(t *testing.T) {
 	}
 	schemaPath := strings.Join(pathParts, "")
 
-	assert.IsType(&scenario.Scenario{}, s)
-	sc := s.(*scenario.Scenario)
-	expTests := []gdttypes.TestUnit{
+	require.Len(suite.Scenarios, 1)
+	s := suite.Scenarios[0]
+
+	expTests := []gdttypes.Evaluable{
 		&gdthttp.Spec{
 			Spec: gdttypes.Spec{
 				Index:    0,
@@ -204,5 +204,5 @@ func TestParse(t *testing.T) {
 			},
 		},
 	}
-	assert.Equal(expTests, sc.Tests)
+	assert.Equal(expTests, s.Tests)
 }

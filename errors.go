@@ -24,7 +24,7 @@ var (
 	// Header within.
 	ErrExpectedLocationHeader = fmt.Errorf(
 		"%w: expected Location HTTP Header in previous response",
-		gdterrors.ErrRuntime,
+		gdterrors.RuntimeError,
 	)
 )
 
