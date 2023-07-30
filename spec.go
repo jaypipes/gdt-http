@@ -27,8 +27,8 @@ type Spec struct {
 	DELETE string `yaml:"DELETE,omitempty"`
 	// JSON payload to send along in request
 	Data interface{} `yaml:"data,omitempty"`
-	// Response is the assertions for the HTTP response
-	Response *Expect `yaml:"response,omitempty"`
+	// Assert is the assertions for the HTTP response
+	Assert *Expect `yaml:"assert,omitempty"`
 }
 
 // Title returns a good name for the Spec

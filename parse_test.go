@@ -106,7 +106,7 @@ func TestParse(t *testing.T) {
 			Method: "GET",
 			URL:    "/books/nosuchbook",
 			GET:    "/books/nosuchbook",
-			Response: &gdthttp.Expect{
+			Assert: &gdthttp.Expect{
 				JSON: &gdtjson.Expect{
 					Len: &len0,
 				},
@@ -122,7 +122,7 @@ func TestParse(t *testing.T) {
 			Method: "GET",
 			URL:    "/books",
 			GET:    "/books",
-			Response: &gdthttp.Expect{
+			Assert: &gdthttp.Expect{
 				JSON: &gdtjson.Expect{
 					Schema: schemaPath,
 				},
@@ -145,7 +145,7 @@ func TestParse(t *testing.T) {
 				"author_id":    "$.authors.by_name[\"Ernest Hemingway\"].id",
 				"publisher_id": "$.publishers.by_name[\"Charles Scribner's Sons\"].id",
 			},
-			Response: &gdthttp.Expect{
+			Assert: &gdthttp.Expect{
 				Status: &code201,
 				Headers: []string{
 					"Location",
@@ -161,7 +161,7 @@ func TestParse(t *testing.T) {
 			Method: "GET",
 			URL:    "$LOCATION",
 			GET:    "$LOCATION",
-			Response: &gdthttp.Expect{
+			Assert: &gdthttp.Expect{
 				JSON: &gdtjson.Expect{
 					Paths: map[string]string{
 						"$.author.name":             "Ernest Hemingway",
@@ -199,7 +199,7 @@ func TestParse(t *testing.T) {
 					"publisher_id": "$.publishers.by_name[\"Charles Scribner's Sons\"].id",
 				},
 			},
-			Response: &gdthttp.Expect{
+			Assert: &gdthttp.Expect{
 				Status: &code200,
 			},
 		},

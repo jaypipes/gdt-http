@@ -15,5 +15,5 @@ tests:
       pages: 257
       author_id: $.authors.by_name["Ernest Hemingway"].id
       publisher_id: $.publishers.by_name["Charles Scribner's Sons"].id
-   response:
+   assert:
      status: 200

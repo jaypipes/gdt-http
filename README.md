@@ -58,10 +58,10 @@ Each of the test unit objects have the following attributes:
   * `DELETE`: (optional) string with the path or URL to issue an HTTP DELETE request
 * `data`: (optional) if present, will be encoded into the HTTP request
   payload. Elements of the `data` structure may be JSONPath expressions (see [below](#use-jsonpath-expressions-to-substitute-fixture-data))
-* `response`: (optional) object describing the **assertions** to make about the
+* `assert`: (optional) object describing the **assertions** to make about the
   HTTP response received after issuing the HTTP request
 
-The `response` object has the following attributes:
+The `asssert` object has the following attributes:
 
 * `status`: (optional) integer corresponding to the expected HTTP status code
   of the HTTP response
@@ -112,7 +112,7 @@ test unit:
      pages: 480
      author_id: "1"
      publisher_id: "1"
-   response:
+   assert:
      status: 201
 ```
 
@@ -144,7 +144,7 @@ Consider this test unit:
      pages: 480
      author_id: "1"
      publisher_id: "1"
-   response:
+   assert:
      status: 201
 ```
 
@@ -168,7 +168,7 @@ tests:
      pages: 480
      author_id: $.authors.by_name["Ernest Hemingway"].id
      publisher_id: $.publishers.by_name["Charles Scribner's Sons"].id
-   response:
+   assert:
      status: 201
 ```
 
@@ -255,10 +255,10 @@ Then you can grab any data in the fixture using a JSONPath expression in the
      author_id: $.authors.by_name["Ernest Hemingway"].id
 ```
 
-### Specify expected response values (`response.json.paths`)
+### Specify expected response values (`assert.json.paths`)
 
 When you want to validate the structure of the returned JSON object in an HTTP
-response body, you use the `response.json.paths` attribute of the test unit.
+response body, you use the `assert.json.paths` attribute of the test unit.
 
 This attribute is a map of string to string, where the map keys are JSONPath
 expressions and the map values are the expected value when evaluating that
@@ -273,17 +273,17 @@ like so:
 ```yaml
 tests:
   - GET: /books
-    response:
+    assert:
       json:
         paths:
           - $[0].title: For Whom the Bell Tolls
 ```
 
-### Specify expected response value format (`response.json.path_formats`)
+### Specify expected response value format (`assert.json.path_formats`)
 
 When you want to validate that a certain field in a returned JSON object from
 an HTTP response matches a particular common format, you use the
-`response.json.path_formats` attribute of the test unit.
+`assert.json.path_formats` attribute of the test unit.
 
 This attribute is a map of string to string, where the map keys are JSONPath
 expressions and the map values are the [type of format](#valid-format-strings)
@@ -297,7 +297,7 @@ UUID. You would write the test unit like so:
 ```yaml
 tests:
   - GET: /books/thebook
-    response:
+    assert:
       json:
         path_formats:
           - $.id: uuid
@@ -349,12 +349,12 @@ request to return information about the previously created or mutated resource.
 
 ### Response assertions
 
-Use the `response` field in the Spec definition to tell `gdt-http` to assert
+Use the `assert` field in the Spec definition to tell `gdt-http` to assert
 that various pieces of the HTTP response match expectations.
 
 #### Checking for a string in response body
 
-Use the `response.strings` field to check for the existence of one of more
+Use the `assert.strings` field to check for the existence of one of more
 strings in the HTTP response body.
 
 ```yaml
@@ -363,7 +363,7 @@ fixtures:
 tests:
  - name: invalid query parameter is supplied
    GET: /books?invalidparam=1
-   response:
+   assert:
      status: 400
      strings:
        - invalid parameter
@@ -371,7 +371,7 @@ tests:
 
 #### Checking for an HTTP header
 
-Use the `response.headers` field to check for the existence of one of
+Use the `assert.headers` field to check for the existence of one of
 more HTTP headers in the HTTP response.
 
 ```yaml
@@ -380,7 +380,7 @@ fixtures:
 tests:
  - name: invalid query parameter is supplied
    GET: /books?invalidparam=1
-   response:
+   assert:
      status: 400
      headers:
        - Accept
@@ -390,7 +390,7 @@ TODO(jaypipes): Support Header value matching as well.
 
 #### Checking for JSON in response
 
-Use the `response.json` field to assert that the value or format of a value of
+Use the `assert.json` field to assert that the value or format of a value of
 an element identified by JSONPath expression matches an expected value or
 format.
 
@@ -408,13 +408,13 @@ tests:
      pages: 480
      author_id: $.authors.by_name["Ernest Hemingway"].id
      publisher_id: $.publishers.by_name["Charles Scribner's Sons"].id
-   response:
+   assert:
      status: 201
      headers:
       - Location
  - name: look up that created book
    GET: $$LOCATION
-   response:
+   assert:
      status: 200
      json:
        paths:
@@ -426,7 +426,7 @@ tests:
 
 #### Validating an HTTP response to a JSONSchema
 
-You can use the `response.json.schema` field to specify a JSONSchema that the
+You can use the `assert.json.schema` field to specify a JSONSchema that the
 HTTP response body should adhere to.
 
 [`examples/books/tests/api/get_books.yaml`](../examples/books/tests/api/get_books.yaml):
@@ -438,7 +438,7 @@ fixtures:
 tests:
  - name: list all books
    GET: /books
-   response:
+   assert:
      status: 200
      json:
        schema: schemas/get_books.json

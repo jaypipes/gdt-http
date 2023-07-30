@@ -244,7 +244,7 @@ func (s *Spec) Eval(ctx context.Context, t *testing.T) *result.Result {
 		if len(b) > 0 {
 			gdtdebug.Println(ctx, t, "http: < %s", b)
 		}
-		exp := s.Response
+		exp := s.Assert
 		if exp != nil {
 			a := newAssertions(exp, resp, b)
 			fails = a.Failures()
