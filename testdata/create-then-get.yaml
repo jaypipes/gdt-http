@@ -1,4 +1,4 @@
-require:
+fixtures:
  - books_api
  - books_data
 tests:
@@ -10,13 +10,13 @@ tests:
      pages: 480
      author_id: $.authors.by_name["Ernest Hemingway"].id
      publisher_id: $.publishers.by_name["Charles Scribner's Sons"].id
-   response:
+   assert:
      status: 201
      headers:
       - Location
  - name: look up that created book
    GET: $$LOCATION
-   response:
+   assert:
      status: 200
      json:
        paths:

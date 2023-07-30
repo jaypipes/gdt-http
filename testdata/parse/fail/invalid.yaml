@@ -4,4 +4,4 @@ tests:
  - name: invalid test spec definition
    GET: /books/nosuchbook
    # This should be a map
-   response: notamap
+   assert: notamap

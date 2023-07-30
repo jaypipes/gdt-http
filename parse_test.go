@@ -14,7 +14,6 @@ import (
 	"github.com/gdt-dev/gdt"
 	gdtjson "github.com/gdt-dev/gdt/assertion/json"
 	"github.com/gdt-dev/gdt/errors"
-	"github.com/gdt-dev/gdt/scenario"
 	gdttypes "github.com/gdt-dev/gdt/types"
 	gdthttp "github.com/gdt-dev/http"
 	"github.com/stretchr/testify/assert"
@@ -67,9 +66,9 @@ func TestParse(t *testing.T) {
 
 	fp := filepath.Join("testdata", "parse.yaml")
 
-	s, err := gdt.From(fp)
+	suite, err := gdt.From(fp)
 	require.Nil(err)
-	require.NotNil(s)
+	require.NotNil(suite)
 
 	code404 := 404
 	code200 := 200
@@ -94,9 +93,10 @@ func TestParse(t *testing.T) {
 	}
 	schemaPath := strings.Join(pathParts, "")
 
-	assert.IsType(&scenario.Scenario{}, s)
-	sc := s.(*scenario.Scenario)
-	expTests := []gdttypes.TestUnit{
+	require.Len(suite.Scenarios, 1)
+	s := suite.Scenarios[0]
+
+	expTests := []gdttypes.Evaluable{
 		&gdthttp.Spec{
 			Spec: gdttypes.Spec{
 				Index:    0,
@@ -106,7 +106,7 @@ func TestParse(t *testing.T) {
 			Method: "GET",
 			URL:    "/books/nosuchbook",
 			GET:    "/books/nosuchbook",
-			Response: &gdthttp.Expect{
+			Assert: &gdthttp.Expect{
 				JSON: &gdtjson.Expect{
 					Len: &len0,
 				},
@@ -122,7 +122,7 @@ func TestParse(t *testing.T) {
 			Method: "GET",
 			URL:    "/books",
 			GET:    "/books",
-			Response: &gdthttp.Expect{
+			Assert: &gdthttp.Expect{
 				JSON: &gdtjson.Expect{
 					Schema: schemaPath,
 				},
@@ -145,7 +145,7 @@ func TestParse(t *testing.T) {
 				"author_id":    "$.authors.by_name[\"Ernest Hemingway\"].id",
 				"publisher_id": "$.publishers.by_name[\"Charles Scribner's Sons\"].id",
 			},
-			Response: &gdthttp.Expect{
+			Assert: &gdthttp.Expect{
 				Status: &code201,
 				Headers: []string{
 					"Location",
@@ -161,7 +161,7 @@ func TestParse(t *testing.T) {
 			Method: "GET",
 			URL:    "$LOCATION",
 			GET:    "$LOCATION",
-			Response: &gdthttp.Expect{
+			Assert: &gdthttp.Expect{
 				JSON: &gdtjson.Expect{
 					Paths: map[string]string{
 						"$.author.name":             "Ernest Hemingway",
@@ -199,10 +199,10 @@ func TestParse(t *testing.T) {
 					"publisher_id": "$.publishers.by_name[\"Charles Scribner's Sons\"].id",
 				},
 			},
-			Response: &gdthttp.Expect{
+			Assert: &gdthttp.Expect{
 				Status: &code200,
 			},
 		},
 	}
-	assert.Equal(expTests, sc.Tests)
+	assert.Equal(expTests, s.Tests)
 }

@@ -3,13 +3,13 @@ description: a scenario with several well-formed HTTP test specs
 tests:
  - name: no such book was found
    GET: /books/nosuchbook
-   response:
+   assert:
      json:
        len: 0
      status: 404
  - name: list all books
    GET: /books
-   response:
+   assert:
      status: 200
      json:
        schema: testdata/schemas/get_books.json
@@ -21,13 +21,13 @@ tests:
      pages: 480
      author_id: $.authors.by_name["Ernest Hemingway"].id
      publisher_id: $.publishers.by_name["Charles Scribner's Sons"].id
-   response:
+   assert:
      status: 201
      headers:
       - Location
  - name: look up that created book
    GET: $$LOCATION
-   response:
+   assert:
      status: 200
      json:
        paths:
@@ -48,5 +48,5 @@ tests:
       pages: 257
       author_id: $.authors.by_name["Ernest Hemingway"].id
       publisher_id: $.publishers.by_name["Charles Scribner's Sons"].id
-   response:
+   assert:
      status: 200

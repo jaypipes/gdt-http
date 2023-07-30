@@ -1,15 +1,15 @@
-require:
+fixtures:
  - books_api
 tests:
  - name: no such book was found
    GET: /books/nosuchbook
-   response:
+   assert:
      json:
        length: 0
      status: 404
  - name: invalid query parameter is supplied
    GET: /books?invalidparam=1
-   response:
+   assert:
      json:
        length: 0
      status: 400

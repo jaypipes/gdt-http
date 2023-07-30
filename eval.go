@@ -185,9 +185,10 @@ func (s *Spec) preprocessMapValue(
 
 // Run executes the test described by the HTTP test. A new HTTP request and
 // response pair is created during this call.
-func (s *Spec) Run(ctx context.Context, t *testing.T) error {
+func (s *Spec) Eval(ctx context.Context, t *testing.T) *result.Result {
 	runData := &RunData{}
 	var rerr error
+	fails := []error{}
 	t.Run(s.Title(), func(t *testing.T) {
 		url, err := s.getURL(ctx)
 		if err != nil {
@@ -243,20 +244,22 @@ func (s *Spec) Run(ctx context.Context, t *testing.T) error {
 		if len(b) > 0 {
 			gdtdebug.Println(ctx, t, "http: < %s", b)
 		}
-		exp := s.Response
+		exp := s.Assert
 		if exp != nil {
 			a := newAssertions(exp, resp, b)
-			if !a.OK() {
-				for _, failure := range a.Failures() {
-					t.Error(failure)
-				}
-			}
+			fails = a.Failures()
 
 		}
 		runData.Response = resp
 	})
-	return result.New(
-		result.WithError(rerr),
-		result.WithData(pluginName, runData),
-	)
+	if rerr != nil {
+		return result.New(
+			result.WithRuntimeError(rerr),
+		)
+	} else {
+		return result.New(
+			result.WithFailures(fails...),
+			result.WithData(pluginName, runData),
+		)
+	}
 }
