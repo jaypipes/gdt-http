@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	nethttp "net/http"
 	"reflect"
 	"strings"
@@ -43,9 +42,9 @@ type Action struct {
 // runtime error.
 func (a *Action) Do(
 	ctx context.Context,
-	c *http.Client,
+	c *nethttp.Client,
 	defaults *Defaults,
-) (*http.Response, error) {
+) (*nethttp.Response, error) {
 	url, err := a.getURL(ctx, defaults)
 	if err != nil {
 		return nil, err
@@ -54,7 +53,9 @@ func (a *Action) Do(
 	debug.Printf(ctx, "http: > %s %s", a.Method, url)
 	var reqData io.Reader
 	if a.Data != nil {
-		a.processRequestData(ctx)
+		if err := a.processRequestData(ctx); err != nil {
+			return nil, err
+		}
 		jsonBody, err := json.Marshal(a.Data)
 		if err != nil {
 			return nil, err
@@ -63,7 +64,7 @@ func (a *Action) Do(
 		if b.Size() > 0 {
 			sendData, _ := io.ReadAll(b)
 			debug.Printf(ctx, "http: > %s", sendData)
-			b.Seek(0, 0)
+			b.Seek(0, 0) // nolint:errcheck
 		}
 		reqData = b
 	}
@@ -109,9 +110,9 @@ func (a *Action) getURL(
 // expressions. If we find any, we query the fixture registry to see if any
 // fixtures have a value that matches the JSONPath expression. See
 // gdt.fixtures:jsonFixture for more information on how this works
-func (a *Action) processRequestData(ctx context.Context) {
+func (a *Action) processRequestData(ctx context.Context) error {
 	if a.Data == nil {
-		return
+		return nil
 	}
 	// Get a pointer to the unmarshaled interface{} so we can mutate the
 	// contents pointed to
@@ -127,11 +128,18 @@ func (a *Action) processRequestData(ctx context.Context) {
 		for i := 0; i < v.Len(); i++ {
 			item := v.Index(i).Elem()
 			it := item.Type()
-			a.preprocessMap(ctx, item, it.Key(), it.Elem())
+			err := a.preprocessMap(ctx, item, it.Key(), it.Elem())
+			if err != nil {
+				return err
+			}
 		}
 	case reflect.Map:
-		a.preprocessMap(ctx, v, vt.Key(), vt.Elem())
+		err := a.preprocessMap(ctx, v, vt.Key(), vt.Elem())
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // processRequestDataMap processes a map pointed to by v, transforming any

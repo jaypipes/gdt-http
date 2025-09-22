@@ -32,8 +32,8 @@ func (s *Spec) Eval(ctx context.Context) (*api.Result, error) {
 
 	// Make sure we drain and close our response body...
 	defer func() {
-		io.Copy(ioutil.Discard, resp.Body)
-		resp.Body.Close()
+		io.Copy(ioutil.Discard, resp.Body) // nolint:errcheck
+		resp.Body.Close()                  // nolint:errcheck
 	}()
 
 	// Only read the response body contents once and pass the byte
