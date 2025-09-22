@@ -5,100 +5,63 @@
 package http
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	nethttp "net/http"
-	"reflect"
-	"strings"
-	"testing"
 
-	gdtcontext "github.com/gdt-dev/gdt/context"
-	gdtdebug "github.com/gdt-dev/gdt/debug"
-	"github.com/gdt-dev/gdt/result"
-	"github.com/stretchr/testify/require"
+	"github.com/gdt-dev/core/api"
+	gdtcontext "github.com/gdt-dev/core/context"
+	"github.com/gdt-dev/core/debug"
 )
 
-// RunData is data stored in the context about the run. It is fetched from the
-// gdtcontext.PriorRun() function and evaluated for things like the special
-// `$LOCATION` URL value.
-type RunData struct {
-	Response *nethttp.Response
-}
+// Run executes the test described by the HTTP test. A new HTTP request and
+// response pair is created during this call.
+func (s *Spec) Eval(ctx context.Context) (*api.Result, error) {
+	c := client(ctx)
+	defaults := fromBaseDefaults(s.Defaults)
+	runData := &RunData{}
 
-// priorRunData returns any prior run cached data in the context.
-func priorRunData(ctx context.Context) *RunData {
-	prData := gdtcontext.PriorRun(ctx)
-	httpData, ok := prData[pluginName]
-	if !ok {
-		return nil
-	}
-	if data, ok := httpData.(*RunData); ok {
-		return data
-	}
-	return nil
-}
-
-// getURL returns the URL to use for the test's HTTP request. The test's url
-// field is first queried to see if it is the special $LOCATION string. If it
-// is, then we return the previous HTTP response's Location header. Otherwise,
-// we construct the URL from the httpFile's base URL and the test's url field.
-func (s *Spec) getURL(ctx context.Context) (string, error) {
-	if strings.ToUpper(s.URL) == "$LOCATION" {
-		pr := priorRunData(ctx)
-		if pr == nil || pr.Response == nil {
-			panic("test unit referenced $LOCATION before executing an HTTP request")
+	resp, err := s.HTTP.Do(ctx, c, defaults)
+	if err != nil {
+		if err == api.ErrTimeoutExceeded {
+			return api.NewResult(api.WithFailures(api.ErrTimeoutExceeded)), nil
 		}
-		url, err := pr.Response.Location()
-		if err != nil {
-			return "", ErrExpectedLocationHeader
+		return nil, err
+	}
+
+	// Make sure we drain and close our response body...
+	defer func() {
+		io.Copy(ioutil.Discard, resp.Body)
+		resp.Body.Close()
+	}()
+
+	// Only read the response body contents once and pass the byte
+	// buffer to the assertion functions
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if len(body) > 0 {
+		debug.Printf(ctx, "http: < %s", string(body))
+	}
+	a := newAssertions(s.Assert, resp, body)
+	if a.OK(ctx) {
+		runData.Response = resp
+		res := api.NewResult()
+		res.SetData(pluginName, runData)
+		if err := saveVars(ctx, s.Var, body, res); err != nil {
+			return nil, err
 		}
-		return url.String(), nil
+		return res, nil
 	}
-
-	d := fromBaseDefaults(s.Defaults)
-	base := d.BaseURLFromContext(ctx)
-	return base + s.URL, nil
-}
-
-// processRequestData looks through the raw data interface{} that was
-// unmarshaled during parse for any string values that look like JSONPath
-// expressions. If we find any, we query the fixture registry to see if any
-// fixtures have a value that matches the JSONPath expression. See
-// gdt.fixtures:jsonFixture for more information on how this works
-func (s *Spec) processRequestData(ctx context.Context) {
-	if s.Data == nil {
-		return
-	}
-	// Get a pointer to the unmarshaled interface{} so we can mutate the
-	// contents pointed to
-	p := reflect.ValueOf(&s.Data)
-
-	// We're interested in the value pointed to by the interface{}, which is
-	// why we do a double Elem() here.
-	v := p.Elem().Elem()
-	vt := v.Type()
-
-	switch vt.Kind() {
-	case reflect.Slice:
-		for i := 0; i < v.Len(); i++ {
-			item := v.Index(i).Elem()
-			it := item.Type()
-			s.preprocessMap(ctx, item, it.Key(), it.Elem())
-		}
-		//	ht.f.preprocessSliceValue(v, vt.Key(), vt.Elem())
-	case reflect.Map:
-		s.preprocessMap(ctx, v, vt.Key(), vt.Elem())
-	}
+	return api.NewResult(api.WithFailures(a.Failures()...)), nil
 }
 
 // client returns the HTTP client to use when executing HTTP requests. If any
 // fixture provides a state with key "http.client", the fixture is asked for
 // the HTTP client. Otherwise, we use the net/http.DefaultClient
-func (s *Spec) client(ctx context.Context) *nethttp.Client {
+func client(ctx context.Context) *nethttp.Client {
 	// query the fixture registry to determine if any of them contain an
 	// http.client state attribute.
 	fixtures := gdtcontext.Fixtures(ctx)
@@ -114,152 +77,22 @@ func (s *Spec) client(ctx context.Context) *nethttp.Client {
 	return nethttp.DefaultClient
 }
 
-// processRequestDataMap processes a map pointed to by v, transforming any
-// string keys or values of the map into the results of calling the fixture
-// set's State() method.
-func (s *Spec) preprocessMap(
-	ctx context.Context,
-	m reflect.Value,
-	kt reflect.Type,
-	vt reflect.Type,
-) error {
-	it := m.MapRange()
-	for it.Next() {
-		if kt.Kind() == reflect.String {
-			keyStr := it.Key().String()
-			fixtures := gdtcontext.Fixtures(ctx)
-			for _, f := range fixtures {
-				if !f.HasState(keyStr) {
-					continue
-				}
-				trKeyStr := f.State(keyStr)
-				keyStr = trKeyStr.(string)
-			}
-
-			val := it.Value()
-			err := s.preprocessMapValue(ctx, m, reflect.ValueOf(keyStr), val, val.Type())
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
+// RunData is data stored in the context about the run. It is fetched from the
+// gdtcontext.PriorRun() function and evaluated for things like the special
+// `$LOCATION` URL value.
+type RunData struct {
+	Response *nethttp.Response
 }
 
-func (s *Spec) preprocessMapValue(
-	ctx context.Context,
-	m reflect.Value,
-	k reflect.Value,
-	v reflect.Value,
-	vt reflect.Type,
-) error {
-	if vt.Kind() == reflect.Interface {
-		v = v.Elem()
-		vt = v.Type()
-	}
-
-	switch vt.Kind() {
-	case reflect.Slice:
-		for i := 0; i < v.Len(); i++ {
-			item := v.Index(i)
-			fmt.Println(item)
-		}
-		fmt.Printf("map element is an array.\n")
-	case reflect.Map:
-		return s.preprocessMap(ctx, v, vt.Key(), vt.Elem())
-	case reflect.String:
-		valStr := v.String()
-		fixtures := gdtcontext.Fixtures(ctx)
-		for _, f := range fixtures {
-			if !f.HasState(valStr) {
-				continue
-			}
-			trValStr := f.State(valStr)
-			m.SetMapIndex(k, reflect.ValueOf(trValStr))
-		}
-	default:
+// priorRunData returns any prior run cached data in the context.
+func priorRunData(ctx context.Context) *RunData {
+	data := gdtcontext.Run(ctx)
+	httpData, ok := data[pluginName]
+	if !ok {
 		return nil
 	}
-	return nil
-}
-
-// Run executes the test described by the HTTP test. A new HTTP request and
-// response pair is created during this call.
-func (s *Spec) Eval(ctx context.Context, t *testing.T) *result.Result {
-	runData := &RunData{}
-	var rerr error
-	fails := []error{}
-	t.Run(s.Title(), func(t *testing.T) {
-		url, err := s.getURL(ctx)
-		if err != nil {
-			rerr = err
-			return
-		}
-
-		gdtdebug.Println(ctx, t, "http: > %s %s", s.Method, url)
-		var body io.Reader
-		if s.Data != nil {
-			s.processRequestData(ctx)
-			jsonBody, err := json.Marshal(s.Data)
-			require.Nil(t, err)
-			b := bytes.NewReader(jsonBody)
-			if b.Size() > 0 {
-				sendData, _ := io.ReadAll(b)
-				gdtdebug.Println(ctx, t, "http: > %s", sendData)
-				b.Seek(0, 0)
-			}
-			body = b
-		}
-
-		req, err := nethttp.NewRequest(s.Method, url, body)
-		if err != nil {
-			rerr = err
-			return
-		}
-
-		// TODO(jaypipes): Allow customization of the HTTP client for proxying,
-		// TLS, etc
-		c := s.client(ctx)
-
-		resp, err := c.Do(req)
-		if err != nil {
-			rerr = err
-			return
-		}
-		gdtdebug.Println(ctx, t, "http: < %d", resp.StatusCode)
-
-		// Make sure we drain and close our response body...
-		defer func() {
-			io.Copy(ioutil.Discard, resp.Body)
-			resp.Body.Close()
-		}()
-
-		// Only read the response body contents once and pass the byte
-		// buffer to the assertion functions
-		b, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			rerr = err
-			return
-		}
-		if len(b) > 0 {
-			gdtdebug.Println(ctx, t, "http: < %s", b)
-		}
-		exp := s.Assert
-		if exp != nil {
-			a := newAssertions(exp, resp, b)
-			fails = a.Failures()
-
-		}
-		runData.Response = resp
-	})
-	if rerr != nil {
-		return result.New(
-			result.WithRuntimeError(rerr),
-		)
-	} else {
-		return result.New(
-			result.WithFailures(fails...),
-			result.WithData(pluginName, runData),
-		)
+	if data, ok := httpData.(*RunData); ok {
+		return data
 	}
+	return nil
 }

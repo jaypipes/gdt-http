@@ -5,16 +5,17 @@
 package http_test
 
 import (
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/gdt-dev/gdt"
-	gdtjson "github.com/gdt-dev/gdt/assertion/json"
-	"github.com/gdt-dev/gdt/errors"
-	gdttypes "github.com/gdt-dev/gdt/types"
+	"github.com/gdt-dev/core/api"
+	gdtjson "github.com/gdt-dev/core/assertion/json"
+	"github.com/gdt-dev/core/parse"
+	"github.com/gdt-dev/core/scenario"
 	gdthttp "github.com/gdt-dev/http"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -30,9 +31,14 @@ func TestBadDefaults(t *testing.T) {
 	require := require.New(t)
 
 	fp := filepath.Join("testdata", "parse", "fail", "bad-defaults.yaml")
-	s, err := gdt.From(fp)
+	f, err := os.Open(fp)
+	require.Nil(err)
+	defer f.Close() // nolint:errcheck
+
+	s, err := scenario.FromReader(f, scenario.WithPath(fp))
 	require.NotNil(err)
-	assert.ErrorIs(err, errors.ErrExpectedMap)
+	assert.Error(err, &parse.Error{})
+	assert.ErrorContains(err, "expected map")
 	require.Nil(s)
 }
 
@@ -41,10 +47,14 @@ func TestParseFailures(t *testing.T) {
 	require := require.New(t)
 
 	fp := filepath.Join("testdata", "parse", "fail", "invalid.yaml")
+	f, err := os.Open(fp)
+	require.Nil(err)
+	defer f.Close() // nolint:errcheck
 
-	s, err := gdt.From(fp)
+	s, err := scenario.FromReader(f, scenario.WithPath(fp))
 	require.NotNil(err)
-	assert.ErrorIs(err, errors.ErrExpectedMap)
+	assert.Error(err, &parse.Error{})
+	assert.ErrorContains(err, "expected map")
 	require.Nil(s)
 }
 
@@ -53,10 +63,13 @@ func TestMissingSchema(t *testing.T) {
 	require := require.New(t)
 
 	fp := filepath.Join("testdata", "parse", "fail", "missing-schema.yaml")
+	f, err := os.Open(fp)
+	require.Nil(err)
+	defer f.Close() // nolint:errcheck
 
-	s, err := gdt.From(fp)
+	s, err := scenario.FromReader(f, scenario.WithPath(fp))
 	require.NotNil(err)
-	assert.ErrorIs(err, gdtjson.ErrJSONSchemaFileNotFound)
+	assert.ErrorContains(err, "unable to find JSONSchema file")
 	require.Nil(s)
 }
 
@@ -65,10 +78,12 @@ func TestParse(t *testing.T) {
 	require := require.New(t)
 
 	fp := filepath.Join("testdata", "parse.yaml")
-
-	suite, err := gdt.From(fp)
+	f, err := os.Open(fp)
 	require.Nil(err)
-	require.NotNil(suite)
+	defer f.Close() // nolint:errcheck
+
+	s, err := scenario.FromReader(f, scenario.WithPath(fp))
+	require.Nil(err)
 
 	code404 := 404
 	code200 := 200
@@ -93,19 +108,19 @@ func TestParse(t *testing.T) {
 	}
 	schemaPath := strings.Join(pathParts, "")
 
-	require.Len(suite.Scenarios, 1)
-	s := suite.Scenarios[0]
-
-	expTests := []gdttypes.Evaluable{
+	expTests := []api.Evaluable{
 		&gdthttp.Spec{
-			Spec: gdttypes.Spec{
+			Spec: api.Spec{
 				Index:    0,
 				Name:     "no such book was found",
-				Defaults: &gdttypes.Defaults{},
+				Defaults: &api.Defaults{},
 			},
-			Method: "GET",
-			URL:    "/books/nosuchbook",
-			GET:    "/books/nosuchbook",
+			HTTP: &gdthttp.HTTPSpec{
+				Action: gdthttp.Action{
+					Method: "GET",
+					URL:    "/books/nosuchbook",
+				},
+			},
 			Assert: &gdthttp.Expect{
 				JSON: &gdtjson.Expect{
 					Len: &len0,
@@ -114,14 +129,17 @@ func TestParse(t *testing.T) {
 			},
 		},
 		&gdthttp.Spec{
-			Spec: gdttypes.Spec{
+			Spec: api.Spec{
 				Index:    1,
 				Name:     "list all books",
-				Defaults: &gdttypes.Defaults{},
+				Defaults: &api.Defaults{},
 			},
-			Method: "GET",
-			URL:    "/books",
-			GET:    "/books",
+			HTTP: &gdthttp.HTTPSpec{
+				Action: gdthttp.Action{
+					Method: "GET",
+					URL:    "/books",
+				},
+			},
 			Assert: &gdthttp.Expect{
 				JSON: &gdtjson.Expect{
 					Schema: schemaPath,
@@ -130,20 +148,23 @@ func TestParse(t *testing.T) {
 			},
 		},
 		&gdthttp.Spec{
-			Spec: gdttypes.Spec{
+			Spec: api.Spec{
 				Index:    2,
 				Name:     "create a new book",
-				Defaults: &gdttypes.Defaults{},
+				Defaults: &api.Defaults{},
 			},
-			Method: "POST",
-			URL:    "/books",
-			POST:   "/books",
-			Data: map[string]interface{}{
-				"title":        "For Whom The Bell Tolls",
-				"published_on": publishedOn1940,
-				"pages":        480,
-				"author_id":    "$.authors.by_name[\"Ernest Hemingway\"].id",
-				"publisher_id": "$.publishers.by_name[\"Charles Scribner's Sons\"].id",
+			HTTP: &gdthttp.HTTPSpec{
+				Action: gdthttp.Action{
+					Method: "POST",
+					URL:    "/books",
+					Data: map[string]any{
+						"title":        "For Whom The Bell Tolls",
+						"published_on": publishedOn1940,
+						"pages":        480,
+						"author_id":    "$.authors.by_name[\"Ernest Hemingway\"].id",
+						"publisher_id": "$.publishers.by_name[\"Charles Scribner's Sons\"].id",
+					},
+				},
 			},
 			Assert: &gdthttp.Expect{
 				Status: &code201,
@@ -153,14 +174,17 @@ func TestParse(t *testing.T) {
 			},
 		},
 		&gdthttp.Spec{
-			Spec: gdttypes.Spec{
+			Spec: api.Spec{
 				Index:    3,
 				Name:     "look up that created book",
-				Defaults: &gdttypes.Defaults{},
+				Defaults: &api.Defaults{},
 			},
-			Method: "GET",
-			URL:    "$LOCATION",
-			GET:    "$LOCATION",
+			HTTP: &gdthttp.HTTPSpec{
+				Action: gdthttp.Action{
+					Method: "GET",
+					URL:    "$LOCATION",
+				},
+			},
 			Assert: &gdthttp.Expect{
 				JSON: &gdtjson.Expect{
 					Paths: map[string]string{
@@ -175,28 +199,31 @@ func TestParse(t *testing.T) {
 			},
 		},
 		&gdthttp.Spec{
-			Spec: gdttypes.Spec{
+			Spec: api.Spec{
 				Index:    4,
 				Name:     "create two books",
-				Defaults: &gdttypes.Defaults{},
+				Defaults: &api.Defaults{},
 			},
-			Method: "PUT",
-			URL:    "/books",
-			PUT:    "/books",
-			Data: []interface{}{
-				map[string]interface{}{
-					"title":        "For Whom The Bell Tolls",
-					"published_on": publishedOn1940,
-					"pages":        480,
-					"author_id":    "$.authors.by_name[\"Ernest Hemingway\"].id",
-					"publisher_id": "$.publishers.by_name[\"Charles Scribner's Sons\"].id",
-				},
-				map[string]interface{}{
-					"title":        "To Have and Have Not",
-					"published_on": publishedOn1937,
-					"pages":        257,
-					"author_id":    "$.authors.by_name[\"Ernest Hemingway\"].id",
-					"publisher_id": "$.publishers.by_name[\"Charles Scribner's Sons\"].id",
+			HTTP: &gdthttp.HTTPSpec{
+				Action: gdthttp.Action{
+					Method: "PUT",
+					URL:    "/books",
+					Data: []any{
+						map[string]any{
+							"title":        "For Whom The Bell Tolls",
+							"published_on": publishedOn1940,
+							"pages":        480,
+							"author_id":    "$.authors.by_name[\"Ernest Hemingway\"].id",
+							"publisher_id": "$.publishers.by_name[\"Charles Scribner's Sons\"].id",
+						},
+						map[string]any{
+							"title":        "To Have and Have Not",
+							"published_on": publishedOn1937,
+							"pages":        257,
+							"author_id":    "$.authors.by_name[\"Ernest Hemingway\"].id",
+							"publisher_id": "$.publishers.by_name[\"Charles Scribner's Sons\"].id",
+						},
+					},
 				},
 			},
 			Assert: &gdthttp.Expect{
@@ -204,5 +231,12 @@ func TestParse(t *testing.T) {
 			},
 		},
 	}
-	assert.Equal(expTests, s.Tests)
+	require.Len(s.Tests, len(expTests))
+	for x, st := range s.Tests {
+		exp := expTests[x].(*gdthttp.Spec)
+		sth := st.(*gdthttp.Spec)
+		assert.Equal(exp.HTTP, sth.HTTP)
+		assert.Equal(exp.Var, sth.Var)
+		assert.Equal(exp.Assert, sth.Assert)
+	}
 }
