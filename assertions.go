@@ -5,11 +5,12 @@
 package http
 
 import (
+	"context"
 	nethttp "net/http"
 	"strings"
 
-	gdtjson "github.com/gdt-dev/gdt/assertion/json"
-	gdttypes "github.com/gdt-dev/gdt/types"
+	"github.com/gdt-dev/core/api"
+	gdtjson "github.com/gdt-dev/core/assertion/json"
 )
 
 // Expect contains one or more assertions about an HTTP response
@@ -52,10 +53,6 @@ func headerEqual(r *nethttp.Response, exp string) bool {
 type assertions struct {
 	// failures contains the set of error messages for failed assertions
 	failures []error
-	// terminal indicates there was a failure in evaluating the assertions that
-	// should be considered a terminal condition (and therefore the test action
-	// should not be retried).
-	terminal bool
 	// exp contains the expected conditions to assert against
 	exp *Expect
 	// r is the `nethttp.Response` we will evaluate
@@ -77,18 +74,11 @@ func (a *assertions) Failures() []error {
 	return a.failures
 }
 
-// Terminal returns a bool indicating the assertions failed in a way that is
-// not retryable.
-func (a *assertions) Terminal() bool {
-	if a == nil {
-		return false
-	}
-	return a.terminal
-}
-
 // OK checks all the assertions against the supplied arguments and returns true
 // if all assertions pass.
-func (a *assertions) OK() bool {
+func (a *assertions) OK(
+	ctx context.Context,
+) bool {
 	if a.exp == nil {
 		return true
 	}
@@ -103,8 +93,7 @@ func (a *assertions) OK() bool {
 	}
 	if exp.JSON != nil {
 		ja := gdtjson.New(exp.JSON, a.b)
-		if !ja.OK() {
-			a.terminal = ja.Terminal()
+		if !ja.OK(ctx) {
 			for _, f := range ja.Failures() {
 				a.Fail(f)
 			}
@@ -138,7 +127,7 @@ func newAssertions(
 	exp *Expect,
 	r *nethttp.Response,
 	b []byte,
-) gdttypes.Assertions {
+) api.Assertions {
 	return &assertions{
 		failures: []error{},
 		exp:      exp,

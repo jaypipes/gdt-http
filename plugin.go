@@ -5,14 +5,20 @@
 package http
 
 import (
+	"github.com/gdt-dev/core/api"
+	gdtplugin "github.com/gdt-dev/core/plugin"
 	"gopkg.in/yaml.v3"
+)
 
-	"github.com/gdt-dev/gdt"
-	gdttypes "github.com/gdt-dev/gdt/types"
+var (
+	// DefaultTimeout is the default timeout used for each individual test
+	// spec. Note that gdt's top-level Scenario.Run handles all timeout and
+	// retry behaviour.
+	DefaultTimeout = "5s"
 )
 
 func init() {
-	gdt.RegisterPlugin(Plugin())
+	gdtplugin.Register(Plugin())
 }
 
 const (
@@ -21,9 +27,15 @@ const (
 
 type plugin struct{}
 
-func (p *plugin) Info() gdttypes.PluginInfo {
-	return gdttypes.PluginInfo{
+func (p *plugin) Info() api.PluginInfo {
+	return api.PluginInfo{
 		Name: pluginName,
+		Retry: &api.Retry{
+			Exponential: true,
+		},
+		Timeout: &api.Timeout{
+			After: DefaultTimeout,
+		},
 	}
 }
 
@@ -31,11 +43,11 @@ func (p *plugin) Defaults() yaml.Unmarshaler {
 	return &Defaults{}
 }
 
-func (p *plugin) Specs() []gdttypes.Evaluable {
-	return []gdttypes.Evaluable{&Spec{}}
+func (p *plugin) Specs() []api.Evaluable {
+	return []api.Evaluable{&Spec{}}
 }
 
 // Plugin returns the HTTP gdt plugin
-func Plugin() gdttypes.Plugin {
+func Plugin() api.Plugin {
 	return &plugin{}
 }

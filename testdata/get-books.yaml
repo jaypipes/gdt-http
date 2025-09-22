@@ -7,4 +7,4 @@ tests:
    assert:
      status: 200
      json:
-       schema: testdata/schemas/get_books.json
+       schema: schemas/get_books.json
